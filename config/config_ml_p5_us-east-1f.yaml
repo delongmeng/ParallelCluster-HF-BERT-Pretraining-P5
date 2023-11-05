@@ -1,0 +1,65 @@
+Region: us-east-1
+Image:
+  Os: ubuntu2004
+  CustomAmi: <custom-ami-id> 
+HeadNode:
+  Iam:
+    S3Access:
+      - BucketName: my-ml-bucket
+        EnableWriteAccess: false
+    AdditionalIamPolicies:
+      - Policy: arn:aws:iam::aws:policy/AmazonSSMFullAccess
+  InstanceType: c5n.2xlarge
+  Networking:
+    SubnetId: <public-subnet-id> # us-east-1f
+  Ssh:
+    KeyName: delongmeng
+  LocalStorage:
+    RootVolume:
+      Size: 1024
+      VolumeType: gp3
+  CustomActions:
+    OnNodeConfigured:
+      Script: s3://my-ml-bucket/p5_BERT_pretrain/setup.sh
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+    - Name: queue1
+      ComputeResources:
+        - Instances:
+            - InstanceType: p5.48xlarge
+          MinCount: 1
+          MaxCount: 2
+          DisableSimultaneousMultithreading: true
+          Efa:
+            Enabled: true
+          Name: p5
+      ComputeSettings:
+        LocalStorage:
+          RootVolume:
+            Size: 1024
+            VolumeType: gp3
+      Networking:
+        SubnetIds:
+          - <private-subnet-id> # us-east-1f
+        PlacementGroup:
+          Enabled: true
+      CustomActions:
+        OnNodeConfigured:
+          Script: s3://my-ml-bucket/p5_BERT_pretrain/setup.sh
+      Iam:
+        S3Access:
+          - BucketName: my-ml-bucket
+        AdditionalIamPolicies:
+          - Policy: arn:aws:iam::aws:policy/AmazonSSMFullAccess
+SharedStorage:
+  - MountDir: /shared
+    Name: default-ebs
+    StorageType: Ebs
+  - Name: fsxshared
+    StorageType: FsxLustre
+    MountDir: /lustre
+    FsxLustreSettings:
+      StorageCapacity: 1200
+      ImportPath: s3://my-ml-bucket
+      DeploymentType: SCRATCH_2
